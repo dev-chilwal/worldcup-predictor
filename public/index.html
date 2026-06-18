@@ -115,7 +115,9 @@ window.GROUP_CODE = "your-group-code";</code>
           </div>
           <p class="section-note">
             Predictions lock at kickoff. Enter a score for each match before it
-            starts.
+            starts. Scoring: <strong>5</strong> exact &middot;
+            <strong>4</strong> goal difference &middot; <strong>3</strong> correct
+            result &middot; highest tier only. See the Leaderboard tab for details.
           </p>
           <div id="fixtures-body">
             <div class="loading">
@@ -131,6 +133,16 @@ window.GROUP_CODE = "your-group-code";</code>
             <h2>Leaderboard</h2>
           </div>
           <p class="section-note">Standings update daily after results sync.</p>
+          <div class="scoring-card">
+            <h3 class="scoring-title">How scoring works</h3>
+            <ul class="scoring-list">
+              <li><span class="pts pts-5">5</span> <span class="pts-label">Exact score</span> <span class="pts-desc">you nailed both teams' goals</span></li>
+              <li><span class="pts pts-4">4</span> <span class="pts-label">Correct goal difference</span> <span class="pts-desc">right margin, wrong exact score</span></li>
+              <li><span class="pts pts-3">3</span> <span class="pts-label">Correct result</span> <span class="pts-desc">right winner or a draw</span></li>
+              <li><span class="pts pts-0">0</span> <span class="pts-label">Otherwise</span> <span class="pts-desc">wrong outcome</span></li>
+            </ul>
+            <p class="scoring-foot">Only the highest tier that applies is awarded per match.</p>
+          </div>
           <div id="leaderboard-body">
             <div class="loading">
               <div class="spinner"></div>

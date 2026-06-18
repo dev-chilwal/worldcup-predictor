@@ -935,3 +935,69 @@ main {
     transform: translateY(8px);
   }
 }
+
+/* Scoring rules card (Leaderboard tab) */
+.scoring-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.scoring-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: var(--text);
+}
+.scoring-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.scoring-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.scoring-list .pts {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #06120c;
+}
+.pts-5 { background: var(--green); }
+.pts-4 { background: var(--gold); }
+.pts-3 { background: var(--blue); }
+.pts-0 { background: var(--text-faint); color: var(--bg); }
+.scoring-list .pts-label {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 14px;
+}
+.scoring-list .pts-desc {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.scoring-foot {
+  margin: 12px 0 0;
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
+
+/* "Awaiting result" status badge (stale live data) */
+.status-badge.pending {
+  background: rgba(233, 196, 106, 0.14);
+  color: var(--gold);
+  border: 1px solid rgba(233, 196, 106, 0.35);
+}

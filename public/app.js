@@ -653,8 +653,16 @@
 
   function statusBadge(m) {
     var s = (m.status || "").toUpperCase();
-    if (s === "IN_PLAY" || s === "PAUSED")
+    if (s === "IN_PLAY" || s === "PAUSED") {
+      // A football match can't realistically be live for more than ~3 hours.
+      // If the data source still says live well past that, it's just stale
+      // (results haven't synced yet) — show "Awaiting result" instead of Live.
+      var kicked = new Date(m.utc_kickoff).getTime();
+      var threeHrs = 3 * 60 * 60 * 1000;
+      if (!isNaN(kicked) && Date.now() - kicked > threeHrs)
+        return '<span class="status-badge pending">Awaiting result</span>';
       return '<span class="status-badge live">Live</span>';
+    }
     if (s === "FINISHED")
       return '<span class="status-badge finished">Finished</span>';
     if (isFuture(m.utc_kickoff))
