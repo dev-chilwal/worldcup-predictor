@@ -7,5 +7,12 @@
   publish = "public"
   functions = "netlify/functions"
 
+[build.environment]
+  # SUPABASE_URL and the publishable key are public frontend values that
+  # intentionally appear in public/config.js, so exclude them from the
+  # secrets scanner. The real secrets (service role key, football token)
+  # are NOT in the repo — they live only in Netlify env vars.
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL"
+
 [functions]
   directory = "netlify/functions"
