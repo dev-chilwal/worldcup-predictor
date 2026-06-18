@@ -1631,3 +1631,252 @@ main {
   color: var(--gold);
   border: 1px solid rgba(233, 196, 106, 0.35);
 }
+
+/* =====================================================================
+   Fixtures tab — animated World Cup stadium background
+   Sits BEHIND the fixtures content. Dark scene by design (hardcoded hex,
+   not theme tokens, since it's a physical scene). Tuned subtle so match
+   cards, team names and the score inputs stay perfectly legible.
+   ===================================================================== */
+
+/* Stacking context for the bg + content. The tab itself is NOT clipped —
+   only .fx-bg clips so beams/balls don't spill out. */
+#tab-fixtures {
+  position: relative;
+}
+
+/* Keep real content above the decorative layer. */
+#tab-fixtures .fixtures-hero,
+#tab-fixtures #fixtures-body,
+#tab-fixtures .section-note {
+  position: relative;
+  z-index: 1;
+}
+
+.fx-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 0;
+}
+
+.fx-bg > * {
+  position: absolute;
+  inset: 0;
+  will-change: transform, opacity;
+}
+
+/* Mowed-pitch vertical stripes — very faint, gently panning. */
+.fx-pitch {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(40, 120, 78, 0.05) 0px,
+      rgba(40, 120, 78, 0.05) 56px,
+      rgba(16, 64, 42, 0.05) 56px,
+      rgba(16, 64, 42, 0.05) 112px
+    );
+  opacity: 0.55;
+}
+
+/* Floodlight beams — diagonal soft cones sweeping slowly. */
+.fx-beam {
+  top: -30%;
+  left: -20%;
+  width: 70%;
+  height: 160%;
+  transform-origin: top center;
+  filter: blur(36px);
+  opacity: 0;
+}
+
+.fx-beam-blue {
+  background: radial-gradient(
+    closest-side at 50% 0%,
+    rgba(78, 168, 222, 0.16) 0%,
+    rgba(78, 168, 222, 0.06) 45%,
+    transparent 72%
+  );
+}
+
+.fx-beam-gold {
+  left: auto;
+  right: -20%;
+  background: radial-gradient(
+    closest-side at 50% 0%,
+    rgba(233, 196, 106, 0.15) 0%,
+    rgba(233, 196, 106, 0.05) 45%,
+    transparent 72%
+  );
+}
+
+/* Soft green "stadium glow" — slow breathing pulse. */
+.fx-glow {
+  background: radial-gradient(
+    90% 70% at 50% 18%,
+    rgba(47, 191, 113, 0.12) 0%,
+    transparent 60%
+  );
+  opacity: 0.5;
+}
+
+/* Dark scrim keeps text contrast strong over the scene. */
+.fx-scrim {
+  background:
+    linear-gradient(180deg, rgba(4, 14, 10, 0.42) 0%, rgba(4, 14, 10, 0.58) 100%),
+    radial-gradient(120% 90% at 50% 0%, transparent 40%, rgba(4, 14, 10, 0.5) 100%);
+}
+
+/* Drifting soccer balls (JS-spawned). */
+.fx-ball {
+  position: absolute;
+  bottom: -60px;
+  border-radius: 50%;
+  background:
+    radial-gradient(28% 28% at 38% 32%, rgba(255, 255, 255, 0.9) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, #f4f8f5 0%, #cdd8d0 75%, #9fb0a5 100%);
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+}
+
+/* Black pentagon accent on each ball. */
+.fx-ball::before {
+  content: "";
+  position: absolute;
+  top: 32%;
+  left: 32%;
+  width: 36%;
+  height: 36%;
+  background: rgba(16, 24, 20, 0.78);
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+}
+
+/* Confetti pieces (JS-spawned, one-shot on a goal). */
+.fx-confetti-piece {
+  position: absolute;
+  top: -24px;
+  width: 8px;
+  height: 13px;
+  border-radius: 2px;
+  opacity: 0;
+}
+
+/* ---------- Motion (only when the user allows it) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .fx-pitch {
+    animation: fx-pitch-pan 26s linear infinite;
+  }
+  .fx-beam-blue {
+    animation: fx-beam-sweep-a 17s ease-in-out infinite;
+  }
+  .fx-beam-gold {
+    animation: fx-beam-sweep-b 21s ease-in-out infinite;
+  }
+  .fx-glow {
+    animation: fx-glow-pulse 9s ease-in-out infinite;
+  }
+  .fx-ball {
+    animation: fx-ball-float linear infinite;
+  }
+  .fx-confetti-piece {
+    animation: fx-confetti-fall linear forwards;
+  }
+}
+
+@keyframes fx-pitch-pan {
+  to {
+    transform: translateX(112px);
+  }
+}
+
+@keyframes fx-beam-sweep-a {
+  0%, 100% {
+    transform: rotate(-13deg);
+    opacity: 0.55;
+  }
+  50% {
+    transform: rotate(9deg);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-beam-sweep-b {
+  0%, 100% {
+    transform: rotate(12deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: rotate(-8deg);
+    opacity: 0.95;
+  }
+}
+
+@keyframes fx-glow-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes fx-ball-float {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.5;
+  }
+  88% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-118vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(120%) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+/* ---------- Reduced motion: calm, static scene ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .fx-pitch,
+  .fx-beam,
+  .fx-glow,
+  .fx-ball,
+  .fx-confetti-piece {
+    animation: none !important;
+  }
+  /* Show a faint static pitch + a soft static beam, hide motion-only bits. */
+  .fx-beam-blue {
+    opacity: 0.4;
+    transform: rotate(-6deg);
+  }
+  .fx-beam-gold {
+    opacity: 0.35;
+    transform: rotate(6deg);
+  }
+  .fx-glow {
+    opacity: 0.45;
+  }
+  .fx-balls {
+    display: none;
+  }
+}

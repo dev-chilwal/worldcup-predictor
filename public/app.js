@@ -88,6 +88,103 @@
     selectedDate: null, // local date key "YYYY-MM-DD" currently shown in Fixtures
   };
 
+  // ---------- Fixtures animated background ----------
+  // Tracks each match's last-seen total goals so we can detect new goals and
+  // fire confetti. Stays empty until the first fixtures load primes it.
+  var fxGoalTotals = {};
+  var fxGoalsPrimed = false;
+
+  function fxReducedMotion() {
+    try {
+      return (
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Spawn ~8 drifting soccer balls into .fx-balls (idempotent; skipped under
+  // reduced motion). Defensive: no-op if the container is missing.
+  function spawnFixturesBalls() {
+    if (fxReducedMotion()) return;
+    var section = $("tab-fixtures");
+    if (!section) return;
+    var wrap = section.querySelector(".fx-balls");
+    if (!wrap || wrap.childNodes.length) return; // already populated
+    var count = 8;
+    for (var i = 0; i < count; i++) {
+      var ball = document.createElement("div");
+      ball.className = "fx-ball";
+      var size = 14 + Math.round(Math.random() * 22); // 14–36px
+      ball.style.width = size + "px";
+      ball.style.height = size + "px";
+      ball.style.left = Math.round(Math.random() * 100) + "%";
+      ball.style.animationDuration = (16 + Math.random() * 16).toFixed(1) + "s";
+      ball.style.animationDelay = (-Math.random() * 22).toFixed(1) + "s";
+      wrap.appendChild(ball);
+    }
+  }
+
+  // One-shot tricolor confetti burst, used when a goal is detected.
+  function fireFixturesConfetti() {
+    if (fxReducedMotion()) return;
+    var section = $("tab-fixtures");
+    if (!section) return;
+    var wrap = section.querySelector(".fx-confetti");
+    if (!wrap) return;
+    var colors = ["#2fbf71", "#4ea8de", "#e9c46a", "#ffffff", "#ff5a6a"];
+    var pieces = 50;
+    var made = [];
+    for (var i = 0; i < pieces; i++) {
+      var p = document.createElement("div");
+      p.className = "fx-confetti-piece";
+      p.style.left = Math.round(Math.random() * 100) + "%";
+      p.style.background = colors[i % colors.length];
+      p.style.animationDuration = (2.4 + Math.random() * 1.8).toFixed(2) + "s";
+      p.style.animationDelay = (Math.random() * 0.5).toFixed(2) + "s";
+      p.style.transform = "rotate(" + Math.round(Math.random() * 360) + "deg)";
+      wrap.appendChild(p);
+      made.push(p);
+    }
+    // Clean up after the burst finishes.
+    setTimeout(function () {
+      made.forEach(function (el) {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      });
+    }, 5000);
+  }
+
+  // Inspect freshly-loaded state.matches: if any live/finished match's total
+  // goals increased since last seen, celebrate. Primes silently on first load.
+  function detectGoalsAndCelebrate() {
+    var fired = false;
+    (state.matches || []).forEach(function (m) {
+      var total =
+        (m.home_score == null ? 0 : m.home_score) +
+        (m.away_score == null ? 0 : m.away_score);
+      var prev = fxGoalTotals[m.id];
+      var status = (m.status || "").toUpperCase();
+      var liveOrDone =
+        status === "IN_PLAY" ||
+        status === "PAUSED" ||
+        status === "FINISHED";
+      if (
+        fxGoalsPrimed &&
+        prev != null &&
+        total > prev &&
+        liveOrDone &&
+        !fired
+      ) {
+        fireFixturesConfetti();
+        fired = true; // one burst per refresh is plenty
+      }
+      fxGoalTotals[m.id] = total;
+    });
+    fxGoalsPrimed = true;
+  }
+
   // ---------- Date / time formatting ----------
   function formatKickoff(iso) {
     try {
@@ -344,6 +441,7 @@
     state.user = session.user;
     await loadProfile();
     showApp();
+    spawnFixturesBalls();
     switchTab("fixtures");
     loadFixtures();
   }
@@ -451,6 +549,10 @@
     }
 
     state.matches = matchRes.data || [];
+
+    // Compare new goal totals against last-seen values and celebrate on a new
+    // goal. Primes silently on the first load so it never fires a storm.
+    detectGoalsAndCelebrate();
 
     // Load this user's predictions.
     state.predsByMatch = {};
