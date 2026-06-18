@@ -367,9 +367,13 @@
       }
     );
     hide($("tab-fixtures"));
+    hide($("tab-standings"));
+    hide($("tab-scorers"));
     hide($("tab-leaderboard"));
     hide($("tab-profile"));
     show($("tab-" + tab));
+    if (tab === "standings") loadStandings();
+    if (tab === "scorers") loadScorers();
     if (tab === "leaderboard") loadLeaderboard();
   }
 
@@ -899,6 +903,233 @@
     body.innerHTML = html;
   }
 
+  // ---------- Standings ----------
+  async function loadStandings() {
+    var body = $("standings-body");
+    body.innerHTML =
+      '<div class="loading"><div class="spinner"></div>Loading standings...</div>';
+    var res;
+    try {
+      res = await sb.from("standings").select("*");
+    } catch (e) {
+      res = { error: e };
+    }
+
+    if (res.error) {
+      body.innerHTML =
+        '<div class="empty-state"><p>Could not load standings: ' +
+        escapeHtml(res.error.message || "unknown error") +
+        "</p></div>";
+      return;
+    }
+
+    var rows = res.data || [];
+    if (!rows.length) {
+      body.innerHTML =
+        '<div class="empty-state">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16" stroke-linecap="round"/></svg>' +
+        "<p>Standings will appear once the results sync runs.</p></div>";
+      return;
+    }
+
+    // Group rows by group_name.
+    var byGroup = {};
+    var groupNames = [];
+    rows.forEach(function (r) {
+      var g = r.group_name || "";
+      if (!(g in byGroup)) {
+        byGroup[g] = [];
+        groupNames.push(g);
+      }
+      byGroup[g].push(r);
+    });
+    groupNames.sort(); // "Group A", "Group B", ...
+
+    function num(v) {
+      var n = parseInt(v, 10);
+      return isNaN(n) ? null : n;
+    }
+
+    var html = "";
+    groupNames.forEach(function (g) {
+      var teams = byGroup[g].slice();
+      teams.sort(function (a, b) {
+        var ra = num(a.rank),
+          rb = num(b.rank);
+        if (ra != null && rb != null && ra !== rb) return ra - rb;
+        if (ra != null && rb == null) return -1;
+        if (ra == null && rb != null) return 1;
+        var pa = num(a.points) || 0,
+          pb = num(b.points) || 0;
+        if (pa !== pb) return pb - pa;
+        var da = num(a.goal_diff) || 0,
+          db = num(b.goal_diff) || 0;
+        return db - da;
+      });
+
+      html +=
+        '<div class="standings-group">' +
+        '<h3 class="standings-group-title">' +
+        escapeHtml(g || "Group") +
+        "</h3>" +
+        '<table class="st-table"><thead><tr>' +
+        '<th class="st-pos">#</th><th class="st-team">Team</th>' +
+        "<th>P</th><th>W</th><th>D</th><th>L</th>" +
+        '<th class="st-col-gf">GF</th><th class="st-col-ga">GA</th>' +
+        "<th>GD</th><th>Pts</th>" +
+        "</tr></thead><tbody>";
+
+      teams.forEach(function (t, i) {
+        var rank = num(t.rank);
+        var pos = rank != null ? rank : i + 1;
+        var advance = pos === 1 || pos === 2;
+        html +=
+          '<tr class="' +
+          (advance ? "st-advance" : "") +
+          '">' +
+          '<td class="st-pos">' +
+          pos +
+          "</td>" +
+          '<td class="st-team"><div class="st-team-cell">' +
+          crestHtml(t.logo, t.team_name) +
+          '<span class="st-team-name">' +
+          escapeHtml(t.team_abbr || t.team_name || "") +
+          "</span></div></td>" +
+          "<td>" +
+          (num(t.played) != null ? num(t.played) : 0) +
+          "</td>" +
+          "<td>" +
+          (num(t.wins) != null ? num(t.wins) : 0) +
+          "</td>" +
+          "<td>" +
+          (num(t.draws) != null ? num(t.draws) : 0) +
+          "</td>" +
+          "<td>" +
+          (num(t.losses) != null ? num(t.losses) : 0) +
+          "</td>" +
+          '<td class="st-col-gf">' +
+          (num(t.goals_for) != null ? num(t.goals_for) : 0) +
+          "</td>" +
+          '<td class="st-col-ga">' +
+          (num(t.goals_against) != null ? num(t.goals_against) : 0) +
+          "</td>" +
+          "<td>" +
+          (num(t.goal_diff) != null ? num(t.goal_diff) : 0) +
+          "</td>" +
+          '<td class="st-pts">' +
+          (num(t.points) != null ? num(t.points) : 0) +
+          "</td>" +
+          "</tr>";
+      });
+
+      html += "</tbody></table></div>";
+    });
+
+    body.innerHTML = html;
+  }
+
+  // ---------- Scorers ----------
+  async function loadScorers() {
+    var body = $("scorers-body");
+    body.innerHTML =
+      '<div class="loading"><div class="spinner"></div>Loading scorers...</div>';
+    var res;
+    try {
+      res = await sb.from("scorers").select("*");
+    } catch (e) {
+      res = { error: e };
+    }
+
+    if (res.error) {
+      body.innerHTML =
+        '<div class="empty-state"><p>Could not load scorers: ' +
+        escapeHtml(res.error.message || "unknown error") +
+        "</p></div>";
+      return;
+    }
+
+    var rows = res.data || [];
+
+    function num(v) {
+      var n = parseInt(v, 10);
+      return isNaN(n) ? 0 : n;
+    }
+
+    var scorers = rows
+      .filter(function (r) {
+        return num(r.goals) > 0;
+      })
+      .sort(function (a, b) {
+        if (num(b.goals) !== num(a.goals)) return num(b.goals) - num(a.goals);
+        return num(b.assists) - num(a.assists);
+      })
+      .slice(0, 20);
+
+    var assisters = rows
+      .filter(function (r) {
+        return num(r.assists) > 0;
+      })
+      .sort(function (a, b) {
+        if (num(b.assists) !== num(a.assists))
+          return num(b.assists) - num(a.assists);
+        return num(b.goals) - num(a.goals);
+      })
+      .slice(0, 20);
+
+    if (!scorers.length && !assisters.length) {
+      body.innerHTML =
+        '<div class="empty-state">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3" stroke-linecap="round"/></svg>' +
+        "<p>Top scorers and assisters will appear here as goals are recorded. (This data depends on availability from the results source.)</p></div>";
+      return;
+    }
+
+    function listHtml(title, items, valueKey, valueLabel) {
+      var h =
+        '<div class="scorer-list">' +
+        '<h3 class="scorer-list-title">' +
+        escapeHtml(title) +
+        "</h3>";
+      if (!items.length) {
+        h +=
+          '<div class="scorer-empty">No data yet.</div></div>';
+        return h;
+      }
+      h += '<ol class="scorer-rows">';
+      items.forEach(function (r, i) {
+        h +=
+          '<li class="scorer-row">' +
+          '<span class="scorer-rank' +
+          (i === 0 ? " top1" : "") +
+          '">' +
+          (i + 1) +
+          "</span>" +
+          '<span class="scorer-info">' +
+          '<span class="scorer-name">' +
+          escapeHtml(r.athlete_name || "Player") +
+          "</span>" +
+          '<span class="scorer-team">' +
+          escapeHtml(r.team_abbr || r.team_name || "") +
+          "</span>" +
+          "</span>" +
+          '<span class="scorer-value">' +
+          num(r[valueKey]) +
+          ' <span class="scorer-value-label">' +
+          escapeHtml(valueLabel) +
+          "</span></span>" +
+          "</li>";
+      });
+      h += "</ol></div>";
+      return h;
+    }
+
+    body.innerHTML =
+      '<div class="scorers-grid">' +
+      listHtml("Top Scorers", scorers, "goals", "goals") +
+      listHtml("Top Assisters", assisters, "assists", "assists") +
+      "</div>";
+  }
+
   // ---------- Profile ----------
   function bindProfile() {
     $("save-name-btn").addEventListener("click", async function () {
@@ -945,6 +1176,8 @@
           toast("Results refreshed. Reloading fixtures...", "ok");
           await loadFixtures();
           if (state.activeTab === "leaderboard") loadLeaderboard();
+          if (state.activeTab === "standings") loadStandings();
+          if (state.activeTab === "scorers") loadScorers();
         } else if (resp.status === 404) {
           toast(
             "Sync function not available in this environment.",

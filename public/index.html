@@ -11,6 +11,12 @@
       name="description"
       content="Predict 2026 FIFA World Cup match scores with your friends."
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Barlow+Condensed:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -78,6 +84,7 @@ window.GROUP_CODE = "your-group-code";</code>
     <!-- ============ APP ============ -->
     <div id="app" class="hidden">
       <header class="app-header">
+        <span class="app-header-stripe" aria-hidden="true"></span>
         <div class="app-header-inner">
           <div class="brand">
             <span class="brand-mark" aria-hidden="true">
@@ -109,9 +116,15 @@ window.GROUP_CODE = "your-group-code";</code>
       <main>
         <!-- TAB: Fixtures -->
         <section id="tab-fixtures" class="tab-panel">
-          <div class="section-head">
-            <h2>Fixtures</h2>
-            <button id="refresh-btn" class="btn btn-sm">Refresh results</button>
+          <div class="fixtures-hero">
+            <span class="fixtures-hero-glow" aria-hidden="true"></span>
+            <div class="fixtures-hero-content">
+              <span class="hero-eyebrow">2026 &middot; USA &middot; CAN &middot; MEX</span>
+              <div class="section-head">
+                <h2>Fixtures</h2>
+                <button id="refresh-btn" class="btn btn-sm">Refresh results</button>
+              </div>
+            </div>
           </div>
           <p class="section-note">
             Predictions lock at kickoff. Enter a score for each match before it
@@ -123,6 +136,39 @@ window.GROUP_CODE = "your-group-code";</code>
             <div class="loading">
               <div class="spinner"></div>
               Loading fixtures...
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: Standings -->
+        <section id="tab-standings" class="tab-panel hidden">
+          <div class="section-head">
+            <h2>Standings</h2>
+          </div>
+          <p class="section-note">
+            Group tables update after results sync. Top two of each group
+            advance.
+          </p>
+          <div id="standings-body">
+            <div class="loading">
+              <div class="spinner"></div>
+              Loading standings...
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: Scorers -->
+        <section id="tab-scorers" class="tab-panel hidden">
+          <div class="section-head">
+            <h2>Scorers</h2>
+          </div>
+          <p class="section-note">
+            Top goalscorers and assisters, updated after results sync.
+          </p>
+          <div id="scorers-body">
+            <div class="loading">
+              <div class="spinner"></div>
+              Loading scorers...
             </div>
           </div>
         </section>
@@ -189,6 +235,20 @@ window.GROUP_CODE = "your-group-code";</code>
               <path d="M3 9h18M8 2v4M16 2v4" stroke-linecap="round" />
             </svg>
             Fixtures
+          </button>
+          <button class="tab-btn" data-tab="standings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M3 10h18M3 15h18M9 4v16" stroke-linecap="round" />
+            </svg>
+            Standings
+          </button>
+          <button class="tab-btn" data-tab="scorers">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="8" />
+              <path d="M12 4v3M12 17v3M4 12h3M17 12h3M9.5 9.5l5 5M14.5 9.5l-5 5" stroke-linecap="round" />
+            </svg>
+            Scorers
           </button>
           <button class="tab-btn" data-tab="leaderboard">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">

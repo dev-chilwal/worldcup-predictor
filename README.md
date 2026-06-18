@@ -1,6 +1,6 @@
 # World Cup Predictor
 
-A free web app where you and your friends predict 2026 FIFA World Cup scores. Points are awarded automatically and a leaderboard updates every few hours.
+A free web app where you and your friends predict 2026 FIFA World Cup scores. Points are awarded automatically and the leaderboard refreshes about every 15 minutes. It also shows live group standings and a top scorers/assisters board.
 
 **Scoring (highest tier only, per prediction):**
 - **5 points** — exact score
@@ -8,7 +8,7 @@ A free web app where you and your friends predict 2026 FIFA World Cup scores. Po
 - **3 points** — correct result (winner/draw)
 - **0 points** — otherwise
 
-**Stack (all free):** Netlify (hosts the site + runs the scheduled results sync) · Supabase (database + accounts) · football-data.org (live fixtures and results).
+**Stack (all free):** Netlify (hosts the site + runs the scheduled results sync) · Supabase (database + accounts) · ESPN's free public soccer API (live fixtures, results, standings — no API key required).
 
 **Login:** friends join with a **display name + a shared group code** (set in `public/config.js` as `GROUP_CODE`). No emails are sent — share the code with your friends however you like.
 
@@ -22,12 +22,13 @@ worldcup-predictor/
 │   ├── index.html
 │   ├── app.js
 │   ├── styles.css
-│   └── config.js               ← YOU edit this (Supabase URL + anon key)
+│   └── config.js               ← YOU edit this (Supabase URL, anon key, group code)
 ├── netlify/functions/
-│   ├── lib/sync.js             ← fetches results + grades predictions
+│   ├── lib/sync.js             ← fetches results/standings/scorers + grades
 │   ├── sync-results.js         ← on-demand "Refresh results" endpoint
-│   └── sync-cron.js            ← runs automatically every 3 hours
-├── supabase/schema.sql         ← run once in Supabase to create the database
+│   └── sync-cron.js            ← runs automatically every 15 minutes
+├── supabase/schema.sql                 ← run first (core tables + scoring)
+├── supabase/02_standings_scorers.sql   ← run second (standings + scorers)
 ├── netlify.toml
 ├── package.json
 └── README.md
@@ -37,21 +38,20 @@ worldcup-predictor/
 
 ## Setup — about 20 minutes, no coding required
 
-You'll create three free accounts, copy a few keys between them, and deploy. Follow in order.
+You'll create two free accounts (Supabase + Netlify), copy a few keys between them, and deploy. The results data comes from ESPN's free public API, so there's no third signup. Follow in order.
 
 ### 1. Create the Supabase project (database + login)
 
 1. Go to **https://supabase.com**, sign up, and click **New project**. Pick any name, set a database password (save it somewhere), choose a region near you, and create it. Wait ~2 minutes for it to finish provisioning.
-2. In the left sidebar open **SQL Editor → New query**. Open `supabase/schema.sql` from this folder, copy the **entire** contents, paste it in, and click **Run**. You should see "Success". This creates the tables, security rules, the scoring function, and the leaderboard.
+2. In the left sidebar open **SQL Editor → New query**. Open `supabase/schema.sql`, copy the **entire** contents, paste it in, and click **Run** (creates the core tables, security rules, scoring function, and leaderboard). Then open a **New query** again, paste the contents of `supabase/02_standings_scorers.sql`, and **Run** that too (adds the group standings and top-scorers tables). Both should say "Success".
 3. Set up accounts for the name + code login: go to **Authentication → Providers → Email**, make sure **Email** is enabled, and turn **OFF "Confirm email"** (this is what stops any emails being sent). Save.
 4. Get your two public keys: **Project Settings → API**. Copy:
    - **Project URL** (looks like `https://abcdxyz.supabase.co`)
    - **anon / public** key (a long string)
 
-### 2. Get a football data API key (results source)
+### 2. Results data source (nothing to do)
 
-1. Go to **https://www.football-data.org/client/register** and register for the **free** tier. You'll get an API token by email.
-2. Keep that token handy. (Note: the free tier's competition coverage is limited. If the World Cup isn't included on the free plan when the tournament starts, you may need their lowest paid tier or a free alternative — see Troubleshooting. The app surfaces a clear error if the token can't access the World Cup.)
+Fixtures, live scores, and standings come from ESPN's free public soccer API — **no signup and no API key required**. Skip straight to the next step. (See Troubleshooting for notes on the top-scorers data, which is best-effort on a free source.)
 
 ### 3. Fill in your config
 
@@ -83,11 +83,10 @@ netlify deploy --prod
 
 ### 5. Add the backend secrets to Netlify
 
-In your Netlify site dashboard go to **Site configuration → Environment variables** and add three variables:
+In your Netlify site dashboard go to **Site configuration → Environment variables** and add just two variables (no results API key is needed — ESPN is keyless):
 
 | Key | Value |
 |-----|-------|
-| `FOOTBALL_DATA_TOKEN` | your football-data.org token (step 2) |
 | `SUPABASE_URL` | the same Supabase Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase **service_role** key from Project Settings → API (the secret one — used only server-side) |
 
@@ -99,10 +98,12 @@ Open `public/config.js` and set `window.GROUP_CODE` to the shared code your frie
 
 ### 7. Load the fixtures and go
 
-1. Visit `https://your-site.netlify.app/.netlify/functions/sync-results` once in your browser to pull the World Cup fixtures into the database. You should get a small JSON summary like `{"matchesUpserted":104,...}`.
+1. Visit `https://your-site.netlify.app/.netlify/functions/sync-results` once in your browser to pull the World Cup fixtures, standings, and any results into the database. You should get a small JSON summary like `{"matchesUpserted":104,"standingsUpserted":48,...}`.
 2. Open your site, enter a display name and the group code to join, make some predictions, and share the site URL **and the code** with your friends.
 
-The `sync-cron` function then refreshes results and regrades every 3 hours automatically. Anyone can also hit the **Refresh results** button in the app to pull the latest.
+The `sync-cron` function then refreshes results, standings, and scorers and regrades every 15 minutes automatically. Anyone can also hit the **Refresh results** button in the app to pull the latest.
+
+> **Switching from an earlier (football-data.org) setup?** ESPN uses different match IDs. Before the first ESPN sync, clear old fixtures so you don't get duplicates: in the SQL Editor run `delete from public.predictions; delete from public.matches;` (the `02_standings_scorers.sql` file has this note at the bottom). Skip this on a fresh project.
 
 ---
 
@@ -111,17 +112,19 @@ The `sync-cron` function then refreshes results and regrades every 3 hours autom
 - **Predictions lock at kickoff.** The database security rules reject any insert or edit once a match's kickoff time has passed — so no one can change a prediction after the game starts, even if they tried to bypass the app.
 - **Grading is server-side only.** Points are computed by the `grade_predictions()` database function (run by the scheduled sync), never in the browser, so scores can't be faked.
 - **Leaderboard** is an aggregated view exposing only display names and totals — never anyone's individual predictions.
+- **Standings and scorers** are synced from ESPN into read-only tables. Group standings come directly from ESPN; top scorers/assisters are tallied incrementally from each finished match (best-effort — see Troubleshooting).
 
 ## Free-tier notes
 
 - Supabase free projects **pause after 7 days of no activity**; just open the dashboard to resume. Database storage on Netlify isn't used here (all data lives in Supabase), so no billing-date concerns.
 - Netlify free includes scheduled functions and is far more than enough for a friend group.
-- The football-data.org free token is rate-limited (about 10 requests/min); the app only calls it on the schedule and on manual refresh, well within limits.
+- ESPN's public API is keyless and free; the sync calls it on the schedule and on manual refresh.
 
 ## Troubleshooting
 
-- **`/.netlify/functions/sync-results` returns a 403** → your football-data.org token can't access competition `WC`. Confirm your plan covers the World Cup, or swap in an alternative results source (e.g. API-Football's free tier) by editing `netlify/functions/lib/sync.js`.
-- **Magic link logs you into a blank/old page** → double-check the Site URL and Redirect URLs in Supabase (step 6) match your real Netlify domain.
-- **"App not configured yet"** → `public/config.js` still has placeholders, or wasn't deployed. Re-check step 3 and redeploy.
-- **No fixtures showing** → run the sync URL from step 7.1 once; check the function logs in Netlify if it errors.
+- **No fixtures showing** → run `https://your-site.netlify.app/.netlify/functions/sync-results` once; check the function logs in Netlify if it errors. ESPN is unofficial, so if its API format ever changes the mapping in `netlify/functions/lib/sync.js` may need a tweak.
+- **Standings empty but fixtures work** → ESPN populates group standings once the tournament data is live; re-run the sync.
+- **Top scorers/assisters stay empty** → this is the known best-effort part. ESPN has no free tournament-wide scorers feed, so the app tallies goals from each finished match's data; if that data isn't exposed, the board stays empty. Everything else still works. For guaranteed scorer data you'd swap in a paid API in `lib/sync.js`.
+- **"App not configured yet"** → `public/config.js` still has placeholders (URL, anon key, or group code), or wasn't deployed. Re-check step 3 and redeploy.
+- **Friends can't join** → Email auth enabled and **"Confirm email" OFF** in Supabase, and they're typing the exact group code.
 - **Friends can't join** → make sure Email auth is enabled and **"Confirm email" is OFF** in Supabase (step 1.3), and that they're typing the exact group code.
