@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>World Cup Predictor</title>
+    <meta
+      name="description"
+      content="Predict 2026 FIFA World Cup match scores with your friends."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- ============ NOT CONFIGURED ============ -->
+    <div id="config-warn" class="config-warn hidden">
+      <h2>App not configured yet</h2>
+      <p>
+        This app needs your Supabase project credentials before it can run.
+        Open <strong>config.js</strong> and set your project URL and anon
+        (public) key:
+      </p>
+      <code>window.SUPABASE_URL = "https://your-project.supabase.co";
+window.SUPABASE_ANON_KEY = "your-anon-public-key";</code>
+    </div>
+
+    <!-- ============ LOGIN ============ -->
+    <div id="login-screen" class="login-wrap hidden">
+      <div class="login-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            stroke="#04140c"
+            stroke-width="1.6"
+          />
+          <path
+            d="M12 6.5l3.2 2.3-1.2 3.7H10l-1.2-3.7L12 6.5z"
+            fill="#04140c"
+          />
+        </svg>
+      </div>
+      <h1>World Cup Predictor</h1>
+      <p class="sub">Predict every match. Beat your friends.</p>
+
+      <div class="login-card">
+        <label class="field-label" for="email-input">Your email</label>
+        <input
+          id="email-input"
+          class="text-input"
+          type="email"
+          inputmode="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+        />
+        <button id="send-link-btn" class="btn btn-primary btn-block">
+          Send magic link
+        </button>
+        <div id="login-msg" class="login-msg hidden"></div>
+      </div>
+    </div>
+
+    <!-- ============ APP ============ -->
+    <div id="app" class="hidden">
+      <header class="app-header">
+        <div class="app-header-inner">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                  stroke="#04140c"
+                  stroke-width="1.6"
+                />
+                <path
+                  d="M12 6.5l3.2 2.3-1.2 3.7H10l-1.2-3.7L12 6.5z"
+                  fill="#04140c"
+                />
+              </svg>
+            </span>
+            <span class="brand-title">World <span>Cup</span> Predictor</span>
+          </div>
+          <div class="header-user">
+            <span id="user-name" class="user-name"></span>
+            <button id="logout-btn" class="btn btn-ghost btn-sm">
+              Log out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <!-- TAB: Fixtures -->
+        <section id="tab-fixtures" class="tab-panel">
+          <div class="section-head">
+            <h2>Fixtures</h2>
+            <button id="refresh-btn" class="btn btn-sm">Refresh results</button>
+          </div>
+          <p class="section-note">
+            Predictions lock at kickoff. Enter a score for each match before it
+            starts.
+          </p>
+          <div id="fixtures-body">
+            <div class="loading">
+              <div class="spinner"></div>
+              Loading fixtures...
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: Leaderboard -->
+        <section id="tab-leaderboard" class="tab-panel hidden">
+          <div class="section-head">
+            <h2>Leaderboard</h2>
+          </div>
+          <p class="section-note">Standings update daily after results sync.</p>
+          <div id="leaderboard-body">
+            <div class="loading">
+              <div class="spinner"></div>
+              Loading leaderboard...
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: Profile -->
+        <section id="tab-profile" class="tab-panel hidden">
+          <div class="section-head">
+            <h2>Profile</h2>
+          </div>
+          <div class="profile-card">
+            <div class="profile-field">
+              <span class="field-label">Email</span>
+              <div id="profile-email" class="profile-static"></div>
+            </div>
+            <div class="profile-field">
+              <label class="field-label" for="display-name-input"
+                >Display name</label
+              >
+              <input
+                id="display-name-input"
+                class="text-input"
+                type="text"
+                maxlength="40"
+                placeholder="Your name"
+              />
+              <button id="save-name-btn" class="btn btn-primary">
+                Save name
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Bottom tab bar -->
+      <nav class="tabbar">
+        <div class="tabbar-inner">
+          <button class="tab-btn active" data-tab="fixtures">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="3" y="4" width="18" height="17" rx="2" />
+              <path d="M3 9h18M8 2v4M16 2v4" stroke-linecap="round" />
+            </svg>
+            Fixtures
+          </button>
+          <button class="tab-btn" data-tab="leaderboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M6 21V10M12 21V4M18 21v-7" stroke-linecap="round" />
+            </svg>
+            Leaderboard
+          </button>
+          <button class="tab-btn" data-tab="profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-3.5 3.6-6 8-6s8 2.5 8 6" stroke-linecap="round" />
+            </svg>
+            Profile
+          </button>
+        </div>
+      </nav>
+    </div>
+
+    <!-- Toasts -->
+    <div id="toast-wrap" class="toast-wrap" aria-live="polite"></div>
+
+    <!-- config first, then supabase-js, then app -->
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

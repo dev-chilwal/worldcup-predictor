@@ -1,0 +1,11 @@
+{
+  "name": "worldcup-predictor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend sync + grading functions for the World Cup Predictor app.",
+  "type": "commonjs",
+  "dependencies": {
+    "@netlify/functions": "^3.0.0",
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

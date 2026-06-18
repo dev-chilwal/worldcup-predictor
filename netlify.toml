@@ -1,0 +1,11 @@
+# Netlify configuration for the World Cup Predictor.
+# Static site — no build step. Functions live in netlify/functions.
+# The scheduled function's cron is defined in code via schedule(),
+# so no [[plugins]] or schedule config is needed here.
+
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  directory = "netlify/functions"
