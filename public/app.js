@@ -85,6 +85,7 @@
     matches: [],
     predsByMatch: {}, // match_id -> prediction row
     activeTab: "fixtures",
+    selectedDate: null, // local date key "YYYY-MM-DD" currently shown in Fixtures
   };
 
   // ---------- Date / time formatting ----------
@@ -107,6 +108,44 @@
   function isFuture(iso) {
     var d = new Date(iso).getTime();
     return !isNaN(d) && d > Date.now();
+  }
+
+  // Local calendar-date key ("YYYY-MM-DD") for a given Date, in the browser's
+  // local timezone. A 23:00 UTC kickoff may land on a different local day —
+  // that's intentional; we group by local day.
+  function localDateKeyFromDate(d) {
+    var y = d.getFullYear();
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return y + "-" + (m < 10 ? "0" + m : m) + "-" + (day < 10 ? "0" + day : day);
+  }
+
+  // Local calendar-date key for an ISO kickoff string. Returns "" if invalid.
+  function localDateKey(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return localDateKeyFromDate(d);
+  }
+
+  // Today's local date key.
+  function todayDateKey() {
+    return localDateKeyFromDate(new Date());
+  }
+
+  // Short label for a date key, e.g. "Thu 18 Jun".
+  function formatDateChipLabel(key) {
+    var parts = key.split("-");
+    var d = new Date(
+      parseInt(parts[0], 10),
+      parseInt(parts[1], 10) - 1,
+      parseInt(parts[2], 10)
+    );
+    if (isNaN(d.getTime())) return key;
+    return d.toLocaleDateString(undefined, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    });
   }
 
   // ---------- Screen routing ----------
@@ -428,6 +467,48 @@
     renderFixtures();
   }
 
+  // Build the sorted list of distinct local match dates, each with its matches
+  // (sorted by kickoff ascending) and a count. Returns { keys, byKey }.
+  function buildDateIndex() {
+    var byKey = {};
+    var keys = [];
+    state.matches.forEach(function (m) {
+      var key = localDateKey(m.utc_kickoff);
+      if (!key) return;
+      if (!(key in byKey)) {
+        byKey[key] = [];
+        keys.push(key);
+      }
+      byKey[key].push(m);
+    });
+    keys.sort(); // "YYYY-MM-DD" sorts chronologically as strings
+    keys.forEach(function (key) {
+      byKey[key].sort(function (a, b) {
+        return (
+          new Date(a.utc_kickoff).getTime() - new Date(b.utc_kickoff).getTime()
+        );
+      });
+    });
+    return { keys: keys, byKey: byKey };
+  }
+
+  // Choose the default selected date per the rules:
+  //   today (if it has matches) -> nearest upcoming -> most recent past.
+  function defaultDateKey(keys) {
+    if (!keys.length) return null;
+    var today = todayDateKey();
+    if (keys.indexOf(today) !== -1) return today;
+    var upcoming = null;
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i] >= today) {
+        upcoming = keys[i];
+        break;
+      }
+    }
+    if (upcoming) return upcoming;
+    return keys[keys.length - 1]; // most recent past
+  }
+
   function renderFixtures() {
     var body = $("fixtures-body");
     if (!state.matches.length) {
@@ -438,32 +519,101 @@
       return;
     }
 
-    // Group by matchday label, preserving kickoff order.
-    var groups = [];
-    var index = {};
-    state.matches.forEach(function (m) {
-      var label = m.matchday || "Fixtures";
-      if (!(label in index)) {
-        index[label] = groups.length;
-        groups.push({ label: label, items: [] });
-      }
-      groups[index[label]].items.push(m);
+    var idx = buildDateIndex();
+    var keys = idx.keys;
+    var byKey = idx.byKey;
+
+    // Preserve current selection across re-renders; only fall back to the
+    // default rule when there's no valid current selection (first load).
+    if (!state.selectedDate || keys.indexOf(state.selectedDate) === -1) {
+      state.selectedDate = defaultDateKey(keys);
+    }
+    var selected = state.selectedDate;
+    var selectedIndex = keys.indexOf(selected);
+
+    // ---- Navigator ----
+    var prevDisabled = selectedIndex <= 0;
+    var nextDisabled = selectedIndex < 0 || selectedIndex >= keys.length - 1;
+
+    var navHtml =
+      '<div class="date-nav">' +
+      '<button class="date-nav-arrow" data-nav="prev" aria-label="Previous date"' +
+      (prevDisabled ? " disabled" : "") +
+      ">&lsaquo;</button>" +
+      '<div class="date-strip" id="date-strip">';
+
+    keys.forEach(function (key) {
+      var count = byKey[key].length;
+      navHtml +=
+        '<button class="date-chip' +
+        (key === selected ? " selected" : "") +
+        '" data-date="' +
+        escapeHtml(key) +
+        '"' +
+        (key === selected ? ' aria-current="true"' : "") +
+        ">" +
+        '<span class="date-chip-day">' +
+        escapeHtml(formatDateChipLabel(key)) +
+        "</span>" +
+        '<span class="date-chip-count">' +
+        count +
+        (count === 1 ? " game" : " games") +
+        "</span>" +
+        "</button>";
     });
 
-    var html = "";
-    groups.forEach(function (g) {
-      html +=
-        '<div class="matchday-group"><div class="matchday-label">' +
-        escapeHtml(g.label) +
-        "</div>";
-      g.items.forEach(function (m) {
-        html += matchCardHtml(m);
+    navHtml +=
+      "</div>" +
+      '<button class="date-nav-arrow" data-nav="next" aria-label="Next date"' +
+      (nextDisabled ? " disabled" : "") +
+      ">&rsaquo;</button>" +
+      '<button class="btn btn-sm date-today" data-nav="today">Today</button>' +
+      "</div>";
+
+    // ---- Day's matches ----
+    var dayHtml = "";
+    var items = (selected && byKey[selected]) || [];
+    if (!items.length) {
+      dayHtml =
+        '<div class="empty-state"><p>No matches on this day.</p></div>';
+    } else {
+      items.forEach(function (m) {
+        dayHtml += matchCardHtml(m);
       });
-      html += "</div>";
-    });
-    body.innerHTML = html;
+    }
 
-    // Bind save buttons.
+    body.innerHTML = navHtml + '<div class="day-matches">' + dayHtml + "</div>";
+
+    // Bind navigator controls.
+    Array.prototype.forEach.call(
+      body.querySelectorAll(".date-chip"),
+      function (chip) {
+        chip.addEventListener("click", function () {
+          selectDate(chip.getAttribute("data-date"));
+        });
+      }
+    );
+    Array.prototype.forEach.call(
+      body.querySelectorAll("[data-nav]"),
+      function (btn) {
+        btn.addEventListener("click", function () {
+          var nav = btn.getAttribute("data-nav");
+          if (nav === "prev") {
+            if (selectedIndex > 0) selectDate(keys[selectedIndex - 1]);
+          } else if (nav === "next") {
+            if (selectedIndex >= 0 && selectedIndex < keys.length - 1)
+              selectDate(keys[selectedIndex + 1]);
+          } else if (nav === "today") {
+            var today = todayDateKey();
+            selectDate(
+              keys.indexOf(today) !== -1 ? today : defaultDateKey(keys)
+            );
+          }
+        });
+      }
+    );
+
+    // Bind save buttons (same code path as before).
     Array.prototype.forEach.call(
       body.querySelectorAll("[data-save]"),
       function (btn) {
@@ -472,6 +622,33 @@
         });
       }
     );
+
+    // Auto-scroll the strip so the selected chip is visible.
+    scrollSelectedChipIntoView();
+  }
+
+  function selectDate(key) {
+    if (!key || key === state.selectedDate) {
+      // Still ensure visibility even if unchanged.
+      if (key) scrollSelectedChipIntoView();
+      return;
+    }
+    state.selectedDate = key;
+    renderFixtures();
+  }
+
+  function scrollSelectedChipIntoView() {
+    var strip = $("date-strip");
+    if (!strip) return;
+    var chip = strip.querySelector(".date-chip.selected");
+    if (chip && chip.scrollIntoView) {
+      try {
+        chip.scrollIntoView({ inline: "center", block: "nearest" });
+      } catch (e) {
+        // Older browsers: fall back to no-arg scrollIntoView.
+        chip.scrollIntoView();
+      }
+    }
   }
 
   function statusBadge(m) {

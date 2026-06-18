@@ -382,6 +382,108 @@ main {
   margin: -6px 0 16px;
 }
 
+/* ---------- Date navigator ---------- */
+.date-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 18px;
+  max-width: 100%;
+}
+
+.date-nav-arrow {
+  flex: none;
+  width: 38px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.date-nav-arrow:hover:not(:disabled) {
+  background: var(--bg-elev-2);
+  border-color: var(--green-dark);
+}
+
+.date-nav-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.date-strip {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  padding: 2px 0;
+}
+
+.date-strip::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.date-chip {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 78px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.date-chip:hover {
+  background: var(--bg-elev-2);
+  border-color: var(--green-dark);
+}
+
+.date-chip-day {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.date-chip-count {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.date-chip.selected {
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  border-color: transparent;
+  color: #04140c;
+}
+
+.date-chip.selected .date-chip-count {
+  color: rgba(4, 20, 12, 0.7);
+}
+
+.date-today {
+  flex: none;
+}
+
+.day-matches {
+  margin-top: 2px;
+}
+
 /* ---------- Matchday group ---------- */
 .matchday-group {
   margin-bottom: 26px;
