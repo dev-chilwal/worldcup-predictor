@@ -8,7 +8,9 @@ A free web app where you and your friends predict 2026 FIFA World Cup scores. Po
 - **3 points** — correct result (winner/draw)
 - **0 points** — otherwise
 
-**Stack (all free):** Netlify (hosts the site + runs the scheduled results sync) · Supabase (database + magic-link login) · football-data.org (live fixtures and results).
+**Stack (all free):** Netlify (hosts the site + runs the scheduled results sync) · Supabase (database + accounts) · football-data.org (live fixtures and results).
+
+**Login:** friends join with a **display name + a shared group code** (set in `public/config.js` as `GROUP_CODE`). No emails are sent — share the code with your friends however you like.
 
 ---
 
@@ -41,7 +43,7 @@ You'll create three free accounts, copy a few keys between them, and deploy. Fol
 
 1. Go to **https://supabase.com**, sign up, and click **New project**. Pick any name, set a database password (save it somewhere), choose a region near you, and create it. Wait ~2 minutes for it to finish provisioning.
 2. In the left sidebar open **SQL Editor → New query**. Open `supabase/schema.sql` from this folder, copy the **entire** contents, paste it in, and click **Run**. You should see "Success". This creates the tables, security rules, the scoring function, and the leaderboard.
-3. Magic-link login is on by default. (Optional but recommended for friends: go to **Authentication → Providers → Email** and make sure "Email" is enabled; you can leave "Confirm email" on.)
+3. Set up accounts for the name + code login: go to **Authentication → Providers → Email**, make sure **Email** is enabled, and turn **OFF "Confirm email"** (this is what stops any emails being sent). Save.
 4. Get your two public keys: **Project Settings → API**. Copy:
    - **Project URL** (looks like `https://abcdxyz.supabase.co`)
    - **anon / public** key (a long string)
@@ -91,14 +93,14 @@ In your Netlify site dashboard go to **Site configuration → Environment variab
 
 Then trigger a redeploy (**Deploys → Trigger deploy → Deploy site**) so the functions pick up the variables.
 
-### 6. Tell Supabase your site URL (so magic links work)
+### 6. Set your group code
 
-In Supabase: **Authentication → URL Configuration** → set **Site URL** to your Netlify address (e.g. `https://your-site.netlify.app`) and add it under **Redirect URLs** too. This makes the email login links return users to your app.
+Open `public/config.js` and set `window.GROUP_CODE` to the shared code your friends will type to join (at least 6 characters). Pick it **once** before sharing — changing it later locks out anyone who already joined. Commit and push so Netlify redeploys.
 
 ### 7. Load the fixtures and go
 
 1. Visit `https://your-site.netlify.app/.netlify/functions/sync-results` once in your browser to pull the World Cup fixtures into the database. You should get a small JSON summary like `{"matchesUpserted":104,...}`.
-2. Open your site, log in with your email (check your inbox for the magic link), make some predictions, and share the URL with your friends.
+2. Open your site, enter a display name and the group code to join, make some predictions, and share the site URL **and the code** with your friends.
 
 The `sync-cron` function then refreshes results and regrades every 3 hours automatically. Anyone can also hit the **Refresh results** button in the app to pull the latest.
 
@@ -122,4 +124,4 @@ The `sync-cron` function then refreshes results and regrades every 3 hours autom
 - **Magic link logs you into a blank/old page** → double-check the Site URL and Redirect URLs in Supabase (step 6) match your real Netlify domain.
 - **"App not configured yet"** → `public/config.js` still has placeholders, or wasn't deployed. Re-check step 3 and redeploy.
 - **No fixtures showing** → run the sync URL from step 7.1 once; check the function logs in Netlify if it errors.
-- **Friends can't sign up** → make sure Email auth is enabled in Supabase (step 1.3).
+- **Friends can't join** → make sure Email auth is enabled and **"Confirm email" is OFF** in Supabase (step 1.3), and that they're typing the exact group code.

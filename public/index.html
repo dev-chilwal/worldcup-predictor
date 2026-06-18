@@ -18,12 +18,13 @@
     <div id="config-warn" class="config-warn hidden">
       <h2>App not configured yet</h2>
       <p>
-        This app needs your Supabase project credentials before it can run.
-        Open <strong>config.js</strong> and set your project URL and anon
-        (public) key:
+        This app needs your Supabase project credentials and a group code
+        before it can run. Open <strong>config.js</strong> and set your project
+        URL, anon (public) key, and group code:
       </p>
       <code>window.SUPABASE_URL = "https://your-project.supabase.co";
-window.SUPABASE_ANON_KEY = "your-anon-public-key";</code>
+window.SUPABASE_ANON_KEY = "your-anon-public-key";
+window.GROUP_CODE = "your-group-code";</code>
     </div>
 
     <!-- ============ LOGIN ============ -->
@@ -47,17 +48,28 @@ window.SUPABASE_ANON_KEY = "your-anon-public-key";</code>
       <p class="sub">Predict every match. Beat your friends.</p>
 
       <div class="login-card">
-        <label class="field-label" for="email-input">Your email</label>
+        <label class="field-label" for="name-input">Display name</label>
         <input
-          id="email-input"
+          id="name-input"
           class="text-input"
-          type="email"
-          inputmode="email"
-          autocomplete="email"
-          placeholder="you@example.com"
+          type="text"
+          maxlength="40"
+          autocomplete="nickname"
+          placeholder="Your name"
         />
-        <button id="send-link-btn" class="btn btn-primary btn-block">
-          Send magic link
+        <label class="field-label" for="code-input">Group code</label>
+        <input
+          id="code-input"
+          class="text-input"
+          type="text"
+          autocomplete="off"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="Shared group code"
+        />
+        <button id="join-btn" class="btn btn-primary btn-block">
+          Enter
         </button>
         <div id="login-msg" class="login-msg hidden"></div>
       </div>
@@ -134,8 +146,8 @@ window.SUPABASE_ANON_KEY = "your-anon-public-key";</code>
           </div>
           <div class="profile-card">
             <div class="profile-field">
-              <span class="field-label">Email</span>
-              <div id="profile-email" class="profile-static"></div>
+              <span class="field-label">Signed in as</span>
+              <div id="profile-name" class="profile-static"></div>
             </div>
             <div class="profile-field">
               <label class="field-label" for="display-name-input"

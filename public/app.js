@@ -42,11 +42,15 @@
   }
 
   // ---------- Config guard ----------
+  var SYNTH_DOMAIN = "guest.worldcupgolazo.app";
   var URL = window.SUPABASE_URL;
   var KEY = window.SUPABASE_ANON_KEY;
+  var GROUP_CODE = window.GROUP_CODE;
   var configured =
     typeof URL === "string" &&
     typeof KEY === "string" &&
+    typeof GROUP_CODE === "string" &&
+    GROUP_CODE.length > 0 &&
     URL.indexOf("YOUR-PROJECT") === -1 &&
     KEY.indexOf("YOUR-ANON") === -1 &&
     /^https?:\/\//.test(URL) &&
@@ -121,15 +125,23 @@
       (state.user && state.user.email) ||
       "";
     $("user-name").textContent = name;
-    $("profile-email").textContent = (state.user && state.user.email) || "";
+    $("profile-name").textContent = name;
     $("display-name-input").value =
       (state.profile && state.profile.display_name) || "";
   }
 
   // ---------- Auth ----------
+  function slugify(name) {
+    return String(name || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
   function bindLogin() {
-    var btn = $("send-link-btn");
-    var input = $("email-input");
+    var btn = $("join-btn");
+    var nameInput = $("name-input");
+    var codeInput = $("code-input");
     var msg = $("login-msg");
 
     function setMsg(text, kind) {
@@ -138,42 +150,123 @@
       show(msg);
     }
 
-    async function send() {
-      var email = (input.value || "").trim();
-      if (!email || email.indexOf("@") === -1) {
-        setMsg("Please enter a valid email address.", "err");
+    async function join() {
+      var name = (nameInput.value || "").trim();
+      var code = (codeInput.value || "").trim();
+
+      if (!name) {
+        setMsg("Enter a display name", "err");
         return;
       }
+      if (!code) {
+        setMsg("Enter the group code", "err");
+        return;
+      }
+      if (code !== GROUP_CODE) {
+        setMsg("Incorrect group code", "err");
+        return;
+      }
+      if (GROUP_CODE.length < 6) {
+        setMsg("Group code must be at least 6 characters", "err");
+        return;
+      }
+
+      var slug = slugify(name);
+      if (!slug) {
+        setMsg("Please use letters or numbers in your name", "err");
+        return;
+      }
+
+      var email = slug + "@" + SYNTH_DOMAIN;
+      var password = GROUP_CODE;
+
       btn.disabled = true;
       var original = btn.textContent;
-      btn.textContent = "Sending...";
+      btn.textContent = "Joining...";
+
       try {
-        var res = await sb.auth.signInWithOtp({
+        var signInRes = await sb.auth.signInWithPassword({
           email: email,
-          options: { emailRedirectTo: window.location.origin },
+          password: password,
         });
-        if (res.error) throw res.error;
-        setMsg(
-          "Check your email. We sent a magic link to " +
-            email +
-            ". Open it on this device to sign in.",
-          "ok"
-        );
+
+        if (signInRes.error) {
+          // No existing account (or wrong password) — try to create one.
+          var signUpRes = await sb.auth.signUp({
+            email: email,
+            password: password,
+          });
+
+          if (signUpRes.error) {
+            var em = (signUpRes.error.message || "").toLowerCase();
+            if (
+              em.indexOf("already registered") !== -1 ||
+              em.indexOf("already exists") !== -1 ||
+              em.indexOf("already been registered") !== -1 ||
+              em.indexOf("user already") !== -1
+            ) {
+              setMsg(
+                "That name is taken (or the group code changed). Try a different name.",
+                "err"
+              );
+              return;
+            }
+            setMsg(
+              signUpRes.error.message || "Could not sign in. Try again.",
+              "err"
+            );
+            return;
+          }
+
+          if (!signUpRes.data || !signUpRes.data.session) {
+            setMsg(
+              "Could not sign in. In Supabase, turn OFF 'Confirm email' under Authentication > Providers > Email.",
+              "err"
+            );
+            return;
+          }
+        }
+
+        // Successful auth — upsert the nicely-formatted display name.
+        try {
+          var userRes = await sb.auth.getUser();
+          var user = userRes.data ? userRes.data.user : null;
+          if (user) {
+            var up = await sb
+              .from("profiles")
+              .upsert({ id: user.id, display_name: name }, { onConflict: "id" });
+            if (up.error) {
+              console.log("profile upsert error", up.error);
+            } else {
+              // Reflect the typed name locally so UI shows it immediately,
+              // even though onSignedIn may have loaded the slug first.
+              state.profile = state.profile || { id: user.id };
+              state.profile.display_name = name;
+              if (state.user && $("user-name")) {
+                $("user-name").textContent = name;
+                $("profile-name").textContent = name;
+                $("display-name-input").value = name;
+              }
+            }
+          }
+        } catch (e) {
+          console.log("profile upsert exception", e);
+        }
+        // onAuthStateChange / signIn will route into the app via onSignedIn.
       } catch (err) {
-        setMsg(
-          (err && err.message) || "Could not send the link. Try again.",
-          "err"
-        );
+        setMsg((err && err.message) || "Could not sign in. Try again.", "err");
       } finally {
         btn.disabled = false;
         btn.textContent = original;
       }
     }
 
-    btn.addEventListener("click", send);
-    input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") send();
-    });
+    btn.addEventListener("click", join);
+    function onEnter(e) {
+      if (e.key === "Enter") join();
+    }
+    nameInput.addEventListener("keydown", onEnter);
+    codeInput.addEventListener("keydown", onEnter);
 
     $("logout-btn").addEventListener("click", async function () {
       try {
