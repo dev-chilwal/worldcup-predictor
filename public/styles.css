@@ -482,7 +482,7 @@ main {
   color: var(--green);
 }
 
-/* With 5 tabs, shrink labels/icons so the bar fits on phone widths. */
+/* With 6 tabs, shrink labels/icons so the bar fits on phone widths. */
 @media (max-width: 480px) {
   .tab-btn {
     font-size: 10px;
@@ -1308,6 +1308,151 @@ main {
   .st-table td.st-col-ga {
     display: none;
   }
+}
+
+/* ---------- Knockout ---------- */
+.ko-round {
+  margin-bottom: 26px;
+}
+
+.ko-round:last-child {
+  margin-bottom: 0;
+}
+
+.ko-round-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text);
+  font-weight: 800;
+  margin: 0 0 12px;
+  padding-left: 2px;
+}
+
+.ko-round-title::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+  flex: none;
+}
+
+.ko-round-count {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-faint);
+}
+
+.ko-matches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .ko-matches {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ko-match {
+  background: var(--bg-card-grad);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 10px 12px 11px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+  font-variant-numeric: tabular-nums;
+}
+
+.ko-match-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ko-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ko-team {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.ko-team + .ko-team {
+  margin-top: 2px;
+}
+
+.ko-team .crest,
+.ko-team .crest-fallback {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+
+.ko-team .crest-fallback {
+  font-size: 9px;
+}
+
+.ko-team-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ko-score {
+  flex: none;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  min-width: 18px;
+  text-align: right;
+}
+
+/* Winner — green tint + accent border + brighter text. */
+.ko-team.ko-win {
+  background: rgba(52, 224, 138, 0.08);
+  box-shadow: inset 3px 0 0 0 var(--green);
+}
+
+.ko-team.ko-win .ko-team-name {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.ko-team.ko-win .ko-score {
+  color: var(--green);
+}
+
+.ko-pens {
+  margin-top: 7px;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 /* ---------- Scorers ---------- */

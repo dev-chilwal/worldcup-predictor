@@ -166,6 +166,23 @@ window.GROUP_CODE = "your-group-code";</code>
           </div>
         </section>
 
+        <!-- TAB: Knockout -->
+        <section id="tab-knockout" class="tab-panel hidden">
+          <div class="section-head">
+            <h2>Knockout</h2>
+          </div>
+          <p class="section-note">
+            The road to the final. Brackets fill in as group play ends and
+            knockout results sync. Winners advance to the next round.
+          </p>
+          <div id="knockout-body">
+            <div class="loading">
+              <div class="spinner"></div>
+              Loading knockout rounds...
+            </div>
+          </div>
+        </section>
+
         <!-- TAB: Scorers -->
         <section id="tab-scorers" class="tab-panel hidden">
           <div class="section-head">
@@ -251,6 +268,12 @@ window.GROUP_CODE = "your-group-code";</code>
               <path d="M3 10h18M3 15h18M9 4v16" stroke-linecap="round" />
             </svg>
             Standings
+          </button>
+          <button class="tab-btn" data-tab="knockout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M3 5h5v14H3M16 5h5v14h-5M8 12h4M12 7v10" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Knockout
           </button>
           <button class="tab-btn" data-tab="scorers">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">

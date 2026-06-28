@@ -466,11 +466,13 @@
     );
     hide($("tab-fixtures"));
     hide($("tab-standings"));
+    hide($("tab-knockout"));
     hide($("tab-scorers"));
     hide($("tab-leaderboard"));
     hide($("tab-profile"));
     show($("tab-" + tab));
     if (tab === "standings") loadStandings();
+    if (tab === "knockout") loadKnockout();
     if (tab === "scorers") loadScorers();
     if (tab === "leaderboard") loadLeaderboard();
   }
@@ -1130,6 +1132,130 @@
     body.innerHTML = html;
   }
 
+  // ---------- Knockout ----------
+  // Knockout rounds in bracket order. matchday values are produced by the
+  // sync function from ESPN's season slug (see netlify/functions/lib/sync.js).
+  var KO_ROUNDS = [
+    "Round of 32",
+    "Round of 16",
+    "Quarterfinals",
+    "Semifinals",
+    "Third Place",
+    "Final",
+  ];
+
+  async function loadKnockout() {
+    var body = $("knockout-body");
+    body.innerHTML =
+      '<div class="loading"><div class="spinner"></div>Loading knockout rounds...</div>';
+    var res;
+    try {
+      res = await sb
+        .from("matches")
+        .select(
+          "id, matchday, utc_kickoff, home_team, away_team, home_crest, away_crest, status, home_score, away_score"
+        )
+        .in("matchday", KO_ROUNDS)
+        .order("utc_kickoff", { ascending: true });
+    } catch (e) {
+      res = { error: e };
+    }
+
+    if (res.error) {
+      body.innerHTML =
+        '<div class="empty-state"><p>Could not load knockout rounds: ' +
+        escapeHtml(res.error.message || "unknown error") +
+        "</p></div>";
+      return;
+    }
+
+    var rows = res.data || [];
+    if (!rows.length) {
+      body.innerHTML =
+        '<div class="empty-state">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5h5v14H3M16 5h5v14h-5M8 12h4M12 7v10" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        "<p>The knockout bracket appears once the group stage ends and results sync.</p></div>";
+      return;
+    }
+
+    // Group matches by round.
+    var byRound = {};
+    rows.forEach(function (m) {
+      var r = m.matchday || "";
+      if (!byRound[r]) byRound[r] = [];
+      byRound[r].push(m);
+    });
+
+    var html = "";
+    KO_ROUNDS.forEach(function (round) {
+      var matches = byRound[round];
+      if (!matches || !matches.length) return;
+      matches.sort(function (a, b) {
+        return (
+          new Date(a.utc_kickoff).getTime() - new Date(b.utc_kickoff).getTime()
+        );
+      });
+      html +=
+        '<div class="ko-round">' +
+        '<h3 class="ko-round-title">' +
+        escapeHtml(round) +
+        '<span class="ko-round-count">' +
+        matches.length +
+        (matches.length === 1 ? " match" : " matches") +
+        "</span></h3>" +
+        '<div class="ko-matches">';
+      matches.forEach(function (m) {
+        html += koMatchHtml(m);
+      });
+      html += "</div></div>";
+    });
+
+    body.innerHTML = html;
+  }
+
+  // Render a single knockout fixture as a two-row card with the winner
+  // highlighted. Winner is decided on the synced score; equal scores (the
+  // game went to penalties) leave neither side marked.
+  function koMatchHtml(m) {
+    var finished = (m.status || "").toUpperCase() === "FINISHED";
+    var hasScore =
+      finished && m.home_score != null && m.away_score != null;
+    var homeWin = hasScore && m.home_score > m.away_score;
+    var awayWin = hasScore && m.away_score > m.home_score;
+    var drawn = hasScore && m.home_score === m.away_score;
+
+    function teamRow(name, crest, score, win) {
+      return (
+        '<div class="ko-team' +
+        (win ? " ko-win" : "") +
+        '">' +
+        crestHtml(crest, name) +
+        '<span class="ko-team-name">' +
+        escapeHtml(name || "TBD") +
+        "</span>" +
+        '<span class="ko-score">' +
+        (hasScore ? score : "") +
+        "</span></div>"
+      );
+    }
+
+    return (
+      '<div class="ko-match">' +
+      '<div class="ko-match-meta">' +
+      '<span class="ko-time">' +
+      escapeHtml(formatKickoff(m.utc_kickoff)) +
+      "</span>" +
+      statusBadge(m) +
+      "</div>" +
+      teamRow(m.home_team, m.home_crest, m.home_score, homeWin) +
+      teamRow(m.away_team, m.away_crest, m.away_score, awayWin) +
+      (drawn
+        ? '<div class="ko-pens">Decided on penalties</div>'
+        : "") +
+      "</div>"
+    );
+  }
+
   // ---------- Scorers ----------
   async function loadScorers() {
     var body = $("scorers-body");
@@ -1279,6 +1405,7 @@
           await loadFixtures();
           if (state.activeTab === "leaderboard") loadLeaderboard();
           if (state.activeTab === "standings") loadStandings();
+          if (state.activeTab === "knockout") loadKnockout();
           if (state.activeTab === "scorers") loadScorers();
         } else if (resp.status === 404) {
           toast(
